@@ -1,6 +1,10 @@
 import { useState } from 'react';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import './App.css';
+
+interface HealthResponse {
+  message: string;
+}
 
 function App() {
   const [message, setMessage] = useState('');
@@ -9,10 +13,11 @@ function App() {
   const checkBackend = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/health');
+      const response = await axios.get<HealthResponse>('/api/health');
       setMessage(response.data.message);
     } catch (error) {
-      setMessage(`Failed to connect to backend${error.response ? `: ${error.response.data.message}` : ''}`);
+      const axiosError = error as AxiosError<HealthResponse>;
+      setMessage(`Failed to connect to backend${axiosError.response ? `: ${axiosError.response.data.message}` : ''}`);
     }
     setLoading(false);
   };
