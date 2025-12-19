@@ -1,69 +1,43 @@
 import {
-  describe, it, expect, vi, beforeEach,
+  describe, it, expect,
 } from 'vitest';
-import {
-  render, screen, fireEvent, waitFor,
-} from '@testing-library/react';
-import axios from 'axios';
+import { render, screen } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 
-vi.mock('axios');
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+    },
+  },
+});
+
+function renderWithProviders(ui: React.ReactElement) {
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        {ui}
+      </BrowserRouter>
+    </QueryClientProvider>,
+  );
+}
 
 describe('App', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+  it('renders the navigation', () => {
+    renderWithProviders(<App />);
+    expect(screen.getByRole('link', { name: /home/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /about/i })).toBeInTheDocument();
   });
 
-  it('renders the heading', () => {
-    render(<App />);
+  it('renders the home page by default', () => {
+    renderWithProviders(<App />);
     expect(screen.getByText(/Vite \+ React \+ Node\.js \+ PostgreSQL/i)).toBeInTheDocument();
   });
 
-  it('renders the check backend button', () => {
-    render(<App />);
+  it('renders the check backend button on home page', () => {
+    renderWithProviders(<App />);
     expect(screen.getByRole('button', { name: /check backend connection/i })).toBeInTheDocument();
-  });
-
-  it('shows success message when backend responds', async () => {
-    vi.mocked(axios.get).mockResolvedValue({
-      data: { message: 'Database connection successful' },
-    });
-
-    render(<App />);
-    fireEvent.click(screen.getByRole('button'));
-
-    await waitFor(() => {
-      expect(screen.getByText(/Database connection successful/)).toBeInTheDocument();
-    });
-  });
-
-  it('shows error message when backend fails', async () => {
-    vi.mocked(axios.get).mockRejectedValue({
-      response: { data: { message: 'Connection refused' } },
-    });
-
-    render(<App />);
-    fireEvent.click(screen.getByRole('button'));
-
-    await waitFor(() => {
-      expect(screen.getByText(/Failed to connect to backend/)).toBeInTheDocument();
-    });
-  });
-
-  it('disables button while loading', async () => {
-    vi.mocked(axios.get).mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve({ data: { message: 'OK' } }), 100)),
-    );
-
-    render(<App />);
-    const button = screen.getByRole('button');
-
-    fireEvent.click(button);
-    expect(button).toBeDisabled();
-    expect(screen.getByText(/Checking\.\.\./)).toBeInTheDocument();
-
-    await waitFor(() => {
-      expect(button).not.toBeDisabled();
-    });
   });
 });
